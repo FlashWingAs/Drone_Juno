@@ -397,8 +397,8 @@ waitbar(current_step/number_of_steps, objWaitBar, "calcul en cours - "+num2str(c
 
 %% FastHex control verifications precompute
 
-Script_PreCompute_SmartCascade;
-Script_PreCompute_VisuAddon;
+% Script_PreCompute_SmartCascade;
+% Script_PreCompute_VisuAddon;
 
 %% Définition de la trajectoire
 

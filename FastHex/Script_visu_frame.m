@@ -1,4 +1,4 @@
-Fd = [4.5; 0; m_drone_num*g_ref];
+Fd = [0; 0; m_drone_num*g_ref];
 Mixer_flat = J_rotor_flat_num;
 alpha_value = 40*pi/180;
 dead_zone_alpha = 1*pi/180;
