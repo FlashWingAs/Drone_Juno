@@ -33,5 +33,5 @@ octave-workspace
 
 ### IMAGES ET VIDEOS ###
 
-Images/
-Videos/
+*/Images/
+*/Videos/
