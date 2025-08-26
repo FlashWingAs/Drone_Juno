@@ -13,14 +13,14 @@
 *.mltbx
 
 # Generated helpsearch folders
-helpsearch*/
+*/helpsearch*/
 
 # Simulink code generation folders
-slprj/
-sccprj/
+*/slprj/
+*/sccprj/
 
 # Matlab code generation folders
-codegen/
+*/codegen/
 
 # Simulink autosave extension
 *.autosave
@@ -29,7 +29,7 @@ codegen/
 *.slxc
 
 # Octave session info
-octave-workspace
+*/octave-workspace
 
 ### IMAGES ET VIDEOS ###
 
