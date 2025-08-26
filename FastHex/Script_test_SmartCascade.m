@@ -77,6 +77,8 @@ Comb = Func_combinaisons(Try_vec, 2);
 
 if ~cascade
 
+    [Fmot, Fb, kFmot, kFb] = Func_SmartCascade_PreCompute(alpha_value, yaw, 6);
+
     % n_comb_v = size(Comb, 2);
     % SZ_v = 20;
     % P2C_vertical = [Comb, zeros([2, SZ_v-n_comb_v])];
