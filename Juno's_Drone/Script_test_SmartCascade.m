@@ -1,11 +1,10 @@
-Fd = [0; -4; m_drone_num*g_ref+1];
-Mixer_flat = J_rotor_flat_num;
-alpha_value = 30*pi/180;
+Fd = [5; 0; m_drone_num*g_ref+1];
+alpha_value = 88*pi/180;
 dead_zone_alpha = 1*pi/180;
-Plot_Limits = [-5, 5; -5, 5; -0, 18; -5, 5];
+Plot_Limits = [-8, 8; -8, 8; -0, 30; -8, 8];
 
 eps_precision = 1e-5;
-n_actionneur = 6;
+n_actionneur = 8;
 fprop_sat_min = fprop_sat_vec(1) + 0.0*fprop_sat_vec(2);
 fprop_sat_max = fprop_sat_vec(2) - 0.0*fprop_sat_vec(2);
 N_precision_sphere_cercle = 50;
@@ -14,7 +13,7 @@ if alpha_value < dead_zone_alpha
     alpha_value = 0;
 end
 
-Mixer = Func_sym_Mixer_wrapper(alpha_value, dead_zone_alpha, Mixer_flat);
+[Mixer, Mixer_Flat, ~] = Func_sym_Mixer_wrapper(alpha_value);
 
 Fz_max = (Mixer*fprop_sat_max*ones([n_actionneur,1])).'*[0; 0; 1; 0; 0; 0];
 Fz_min = (Mixer*fprop_sat_min*ones([n_actionneur,1])).'*[0; 0; 1; 0; 0; 0];
@@ -46,7 +45,7 @@ end
 
 if ~cascade
 
-    P2C_enveloppe = Func_combinaisons(Try_vec, 6);
+    P2C_enveloppe = Func_combinaisons(Try_vec, n_actionneur);
     n_enveloppe = size(P2C_enveloppe, 2);
     Enveloppe_drone = zeros(6, n_enveloppe);
 
@@ -103,10 +102,16 @@ if ~cascade
     k = 1;
     for i = 1 : n_actionneur-1
         for j = i+1 : n_actionneur
+            % i
+            % j
             listIntersectionsMax(:,k+0) = Func_intersect_parametrized(edgeLines{1,j}(:,1), edgeLines{1,j}(:,2), edgeLines{1,i}(:,1), edgeLines{1,i}(:,2));
+            % scatter(listIntersectionsMax(1,k+0), listIntersectionsMax(2,k+0), 100, "white", 'o')
             listIntersectionsMax(:,k+1) = Func_intersect_parametrized(edgeLines{2,j}(:,1), edgeLines{2,j}(:,2), edgeLines{2,i}(:,1), edgeLines{2,i}(:,2));
+            % scatter(listIntersectionsMax(1,k+1), listIntersectionsMax(2,k+1), 100, "white", 'o')
             listIntersectionsMax(:,k+2) = Func_intersect_parametrized(edgeLines{1,j}(:,1), edgeLines{1,j}(:,2), edgeLines{2,i}(:,1), edgeLines{2,i}(:,2));
+            % scatter(listIntersectionsMax(1,k+2), listIntersectionsMax(2,k+2), 100, "white", 'o')
             listIntersectionsMax(:,k+3) = Func_intersect_parametrized(edgeLines{2,j}(:,1), edgeLines{2,j}(:,2), edgeLines{1,i}(:,1), edgeLines{1,i}(:,2));
+            % scatter(listIntersectionsMax(1,k+3), listIntersectionsMax(2,k+3), 100, "white", 'o')
             k = k + 4;
         end
     end
@@ -248,7 +253,7 @@ if ~cascade
     r_sphere2 = Fd_t^2 + Fd(3)^2;
     r_sphere = sqrt(r_sphere2);
 
-    
+
     sphere_t = @(t) real((r_sphere.^2-t.^2).^(1/2));
 
     if flag_Fd
@@ -310,7 +315,7 @@ Fz_limits = Plot_Limits(3,:);
 Ft_limits = Plot_Limits(4,:);
 
 frame = figure();
-frame.Visible = 'off';
+% frame.Visible = 'off';
 tiledlayout(1, 3);
 
 nexttile();
@@ -351,8 +356,8 @@ if ~cascade
         plot(d1(1,:), d1(2,:))
         plot(d2(1,:), d2(2,:))
     end
-    for i = 1:size(listIntersections, 2)
-        scatter(listIntersections(1,i), listIntersections(2,i))
+    for i = 1:size(listIntersections_raw, 2)
+        scatter(listIntersections_raw(1,i), listIntersections_raw(2,i))
     end
     [tri_scatter, ~] = convhull(listIntersections(1,:), listIntersections(2,:));
     fill(listIntersections(1,tri_scatter), listIntersections(2,tri_scatter), 'cyan', 'FaceAlpha', 0.5)
@@ -394,4 +399,4 @@ xlim(Ft_limits);
 ylim(Fz_limits);
 
 
-frame.Visible = 'on';
+% frame.Visible = 'on';
