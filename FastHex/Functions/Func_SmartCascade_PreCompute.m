@@ -18,7 +18,7 @@ F_mot = J_mot\Fb;
 
 syms lambda_1 lambda_2
 
-eps_equal = 1e-5;
+eps_equal = 1e-1;
 sys_found = false;
 i = 1;
 k_Ft = -1;
@@ -55,15 +55,15 @@ Ft_lambda = subs(Ft_lambda, Fz, Fz_lambda);
 F_mot_lambda = simplify(subs(F_mot, [Ft, Fz], [Ft_lambda, Fz_lambda]));
 Fb_lambda = J_mot*F_mot_lambda;
 
-kFmot_lambda = cell([2,n_actionneur]);
-kFb_lambda = cell([2,6]);
+kFmot_lambda = zeros([2,n_actionneur]);
+kFb_lambda = zeros([2,6]);
 for i = 1:n_actionneur
-    kFmot_lambda{1, i} = double(diff(F_mot_lambda(i), lambda_1));
-    kFmot_lambda{2, i} = double(diff(F_mot_lambda(i), lambda_2));
+    kFmot_lambda(1, i) = double(diff(F_mot_lambda(i), lambda_1));
+    kFmot_lambda(2, i) = double(diff(F_mot_lambda(i), lambda_2));
 end
 for i = 1:6
-    kFb_lambda{1, i} = double(diff(Fb_lambda(i), lambda_1));
-    kFb_lambda{2, i} = double(diff(Fb_lambda(i), lambda_2));
+    kFb_lambda(1, i) = double(diff(Fb_lambda(i), lambda_1));
+    kFb_lambda(2, i) = double(diff(Fb_lambda(i), lambda_2));
 end
 
 

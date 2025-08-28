@@ -1,11 +1,11 @@
-Fd = [5; 0; m_drone_num*g_ref+1];
-alpha_value = 88*pi/180;
+Fd = [0; 0; m_drone_num*g_ref];
+alpha_value = 30*pi/180;
 dead_zone_alpha = 1*pi/180;
-Plot_Limits = [-8, 8; -8, 8; -0, 30; -8, 8];
+Plot_Limits = [-7.5, 7.5; -7.5, 7.5; -0, 30; -7.5, 7.5];
 
 eps_precision = 1e-5;
 n_actionneur = 8;
-fprop_sat_min = fprop_sat_vec(1) + 0.0*fprop_sat_vec(2);
+fprop_sat_min = fprop_sat_vec(1) + 0.1*fprop_sat_vec(2);
 fprop_sat_max = fprop_sat_vec(2) - 0.0*fprop_sat_vec(2);
 N_precision_sphere_cercle = 50;
 t = linspace(0, 2*pi, N_precision_sphere_cercle);
@@ -13,7 +13,7 @@ if alpha_value < dead_zone_alpha
     alpha_value = 0;
 end
 
-[Mixer, Mixer_Flat, ~] = Func_sym_Mixer_wrapper(alpha_value);
+Mixer = Func_sym_Mixer_wrapper(alpha_value);
 
 Fz_max = (Mixer*fprop_sat_max*ones([n_actionneur,1])).'*[0; 0; 1; 0; 0; 0];
 Fz_min = (Mixer*fprop_sat_min*ones([n_actionneur,1])).'*[0; 0; 1; 0; 0; 0];
@@ -36,6 +36,9 @@ end
 
 if alpha_value < dead_zone_alpha
     alpha_value = 0;
+    cascade = true;
+elseif alpha_value > pi/2 - dead_zone_alpha
+    alpha_value = pi;
     cascade = true;
 else
     cascade = false;
@@ -75,24 +78,28 @@ y_circle_force = r_sphere*sin(t);
 %% Calcul slice verticale plan Fd
 
 Comb = Func_combinaisons(Try_vec, 2);
+r_sphere2 = Fd_t^2 + Fd(3)^2;
+r_sphere = sqrt(r_sphere2);
 
 if ~cascade
 
-    [Fmot, Fb, kFmot, kFb] = Func_SmartCascade_PreCompute(alpha_value, yaw, n_actionneur);
+    % [~, ~, kFmot, ~] = Func_SmartCascade_PreCompute(alpha_value, yaw, n_actionneur);
+    % TO BE REPLACED WITH INTERPOLATION
+    kFmot = Func_interpolationPreComputed(alpha_value, yaw, interpolationAlpha, interpolationYaw, kFmot_memory, dead_zone_alpha);
 
     % Calcul des droites délimitants l'espace accessible pour F_mot
 
     % [a1; a2] * t + [b1; b2]
     % edgeLines{1, :} : cas pour sat-
     % edgeLines{2, :} : cas pour sat+
-    edgeLines = cell([2,n_actionneur]); 
+    edgeLines = zeros([2,n_actionneur,2,2]); 
     for i = 1:n_actionneur
-        if ~Func_equal_eps(kFmot{2, i}, 0, eps_precision)
-            edgeLines{1, i} = [1, 0; -kFmot{1,i}/kFmot{2,i}, fprop_sat_min/kFmot{2,i}];
-            edgeLines{2, i} = [1, 0; -kFmot{1,i}/kFmot{2,i}, fprop_sat_max/kFmot{2,i}];
-        elseif ~Func_equal_eps(kFmot{1, i}, 0, eps_precision)
-            edgeLines{1, i} = [-kFmot{2,i}/kFmot{1,i}, fprop_sat_min/kFmot{1,i}; 1, 0];
-            edgeLines{2, i} = [-kFmot{2,i}/kFmot{1,i}, fprop_sat_max/kFmot{1,i}; 1, 0];
+        if ~Func_equal_eps(kFmot(2, i), 0, eps_precision)
+            edgeLines(1, i, :, :) = [1, 0; -kFmot(1,i)/kFmot(2,i), fprop_sat_min/kFmot(2,i)];
+            edgeLines(2, i, :, :) = [1, 0; -kFmot(1,i)/kFmot(2,i), fprop_sat_max/kFmot(2,i)];
+        elseif ~Func_equal_eps(kFmot(1, i), 0, eps_precision)
+            edgeLines(1, i, :, :) = [-kFmot(2,i)/kFmot(1,i), fprop_sat_min/kFmot(1,i); 1, 0];
+            edgeLines(2, i, :, :) = [-kFmot(2,i)/kFmot(1,i), fprop_sat_max/kFmot(1,i); 1, 0];
         end
     end
 
@@ -102,26 +109,20 @@ if ~cascade
     k = 1;
     for i = 1 : n_actionneur-1
         for j = i+1 : n_actionneur
-            % i
-            % j
-            listIntersectionsMax(:,k+0) = Func_intersect_parametrized(edgeLines{1,j}(:,1), edgeLines{1,j}(:,2), edgeLines{1,i}(:,1), edgeLines{1,i}(:,2));
-            % scatter(listIntersectionsMax(1,k+0), listIntersectionsMax(2,k+0), 100, "white", 'o')
-            listIntersectionsMax(:,k+1) = Func_intersect_parametrized(edgeLines{2,j}(:,1), edgeLines{2,j}(:,2), edgeLines{2,i}(:,1), edgeLines{2,i}(:,2));
-            % scatter(listIntersectionsMax(1,k+1), listIntersectionsMax(2,k+1), 100, "white", 'o')
-            listIntersectionsMax(:,k+2) = Func_intersect_parametrized(edgeLines{1,j}(:,1), edgeLines{1,j}(:,2), edgeLines{2,i}(:,1), edgeLines{2,i}(:,2));
-            % scatter(listIntersectionsMax(1,k+2), listIntersectionsMax(2,k+2), 100, "white", 'o')
-            listIntersectionsMax(:,k+3) = Func_intersect_parametrized(edgeLines{2,j}(:,1), edgeLines{2,j}(:,2), edgeLines{1,i}(:,1), edgeLines{1,i}(:,2));
-            % scatter(listIntersectionsMax(1,k+3), listIntersectionsMax(2,k+3), 100, "white", 'o')
+            listIntersectionsMax(:,k+0) = Func_intersect_parametrized(edgeLines(1,j,:,1), edgeLines(1,j,:,2), edgeLines(1,i,:,1), edgeLines(1,i,:,2));
+            listIntersectionsMax(:,k+1) = Func_intersect_parametrized(edgeLines(2,j,:,1), edgeLines(2,j,:,2), edgeLines(2,i,:,1), edgeLines(2,i,:,2));
+            listIntersectionsMax(:,k+2) = Func_intersect_parametrized(edgeLines(1,j,:,1), edgeLines(1,j,:,2), edgeLines(2,i,:,1), edgeLines(2,i,:,2));
+            listIntersectionsMax(:,k+3) = Func_intersect_parametrized(edgeLines(2,j,:,1), edgeLines(2,j,:,2), edgeLines(1,i,:,1), edgeLines(1,i,:,2));
             k = k + 4;
         end
     end
     
-    [listIntersections_row, listIntersections_col] = find(listIntersectionsMax ~= Inf);
+    [~, listIntersections_col] = find(listIntersectionsMax ~= Inf);
     listIntersections_raw =  Func_remDuplicate(listIntersectionsMax(:, listIntersections_col));
     indices2keep = true([1, size(listIntersections_raw, 2)]);
     for i = 1:size(listIntersections_raw, 2)
         for k = 1:n_actionneur
-            temp = kFmot{1, k}*listIntersections_raw(1, i) + kFmot{2, k}*listIntersections_raw(2, i);
+            temp = kFmot(1, k)*listIntersections_raw(1, i) + kFmot(2, k)*listIntersections_raw(2, i);
             if Func_greater_eps(temp, fprop_sat_max, eps_precision)
                 indices2keep(i) = false;
                 break;
@@ -139,7 +140,7 @@ if ~cascade
     listFmot = zeros([n_actionneur, nIntersection]);
     for i = 1:nIntersection
         for j = 1:n_actionneur
-            listFmot(j, i) = kFmot{1, j}*listIntersections(1, i) + kFmot{2, j}*listIntersections(2, i);
+            listFmot(j, i) = kFmot(1, j)*listIntersections(1, i) + kFmot(2, j)*listIntersections(2, i);
         end
     end
 
@@ -157,6 +158,7 @@ if ~cascade
     listFz = listFw(3,:);
 
     %% Génération des droites dans les plan (Ft, Fz)
+
     [tri_plan_visu, ~] = convhull(listFt, listFz, "Simplify", false);
     listFt_visu = listFt(tri_plan_visu);
     listFz_visu = listFz(tri_plan_visu);
@@ -196,11 +198,15 @@ if ~cascade
             listLinesFw_visu{2,i} = [Func_root_parmLine(temp(:,1), temp(:,2), [listFt_visu(i); listFz_visu(i)]), Func_root_parmLine(temp(:,1), temp(:,2), [listFt_visu(1); listFz_visu(1)])];
         end
     end
-
-
     listFt_compute = listFt(listFt>=-eps_precision);
     listFz_compute = listFz(listFt>=-eps_precision);
-    [tri_plan_compute, ~] = convhull(listFt_compute, listFz_compute, "Simplify", false);
+
+
+    % [tri_plan_compute, ~] = convhull(listFt_compute, listFz_compute, "Simplify", false);
+    [~, k_sort] = sort(listFz_compute);
+    tri_plan_compute = [k_sort, k_sort(1)];
+    
+    
     listFt_compute = listFt_compute(tri_plan_compute);
     listFz_compute = listFz_compute(tri_plan_compute);
     nLines_compute = size(listFt_compute, 2)-2;
@@ -208,7 +214,9 @@ if ~cascade
     %%% paramètres de la droite,
     %%% point de début, point de fin.
     %%% Fd à l'exterieur
-    listLinesFw_compute = cell([3, nLines_compute]);
+    listLinesFw_computeLine = zeros([nLines_compute, 2, 2]);
+    listLinesFw_computePoints = zeros([nLines_compute, 2]);
+    listLinesFw_computeBool = false(nLines_compute);
     for i = 1:nLines_compute
         temp = zeros([2,2]);
         x1 = listFt_compute(i);
@@ -233,27 +241,24 @@ if ~cascade
         %%% pas de else car 2 points ne peuvent être au même endroit, car
         %%% retrait des doublons avant
         end
-        listLinesFw_compute{1,i} = temp;
+        listLinesFw_computeLine(i,:,:) = temp;
         % if i < nLines_compute
-            listLinesFw_compute{2,i} = [Func_root_parmLine(temp(:,1), temp(:,2), [listFt_compute(i); listFz_compute(i)]), Func_root_parmLine(temp(:,1), temp(:,2), [listFt_compute(i+1); listFz_compute(i+1)])];
+            listLinesFw_computePoints(i,:) = [Func_root_parmLine(temp(:,1), temp(:,2), [listFt_compute(i); listFz_compute(i)]), Func_root_parmLine(temp(:,1), temp(:,2), [listFt_compute(i+1); listFz_compute(i+1)])];
         % else
             % listLinesFw_compute{2,i} = [Func_root_parmLine(temp(:,1), temp(:,2), [listFt_compute(i); listFz_compute(i)]), Func_root_parmLine(temp(:,1), temp(:,2), [listFt_compute(1); listFz_compute(1)])];
         % end
-        listLinesFw_compute{3,i} = Func_RightOrLeft([x2-x1; y2-y1], [Fd_t-x1; Fd(3)-y1]);
+        listLinesFw_computeBool(i) = Func_RightOrLeft([x2-x1; y2-y1], [Fd_t-x1; Fd(3)-y1]);
     end
 
     %% Vérification si Fd est en dehors de l'espace de forces accessibles
 
     flag_Fd = true;
     for i = 1:nLines_compute
-        if listLinesFw_compute{3,i}
+        if listLinesFw_computeBool(i)
             flag_Fd = false;
         end
     end
-    r_sphere2 = Fd_t^2 + Fd(3)^2;
-    r_sphere = sqrt(r_sphere2);
-
-
+    
     sphere_t = @(t) real((r_sphere.^2-t.^2).^(1/2));
 
     if flag_Fd
@@ -266,9 +271,9 @@ if ~cascade
         if alpha_value ~= 0 && r_sphere <= Fz_max && r_sphere >= Fz_min
             x0 = Inf;
             for i = 1:nLines_compute
-                poly = [listLinesFw_compute{1,i}(1,1).^2 + listLinesFw_compute{1,i}(2,1).^2, ...
-                        2*listLinesFw_compute{1,i}(1,1)*listLinesFw_compute{1,i}(1,2) + 2*listLinesFw_compute{1,i}(2,1)*listLinesFw_compute{1,i}(2,2), ...
-                        listLinesFw_compute{1,i}(1,2).^2 + listLinesFw_compute{1,i}(2,2).^2 - r_sphere2];
+                poly = [listLinesFw_computeLine(i,1,1).^2 + listLinesFw_computeLine(i,2,1).^2, ...
+                        2*listLinesFw_computeLine(i,1,1)*listLinesFw_computeLine(i,1,2) + 2*listLinesFw_computeLine(i,2,1)*listLinesFw_computeLine(i,2,2), ...
+                        listLinesFw_computeLine(i,1,2).^2 + listLinesFw_computeLine(i,2,2).^2 - r_sphere2];
                 roots_temp = roots(poly);
                 x_temp = min(abs(roots_temp));
                 if x0 == Inf
@@ -313,90 +318,106 @@ Fx_limits = Plot_Limits(1,:);
 Fy_limits = Plot_Limits(2,:);
 Fz_limits = Plot_Limits(3,:);
 Ft_limits = Plot_Limits(4,:);
+ticks_horizontal = [-7.5, -5, -2.5, 0, 2.5, 5, 7.5];
+
+fontSize_title = 30;
+fontSize_legend = 15;
+fontSize_axisName = 30;
+fontSize_axisTicks = 20;
 
 frame = figure();
-% frame.Visible = 'off';
+frame.Visible = 'off';
 tiledlayout(1, 3);
 
-nexttile();
+tile = nexttile();
 hold on
 if ~cascade
-    trisurf(tri_enveloppe, F_x_enveloppe, F_y_enveloppe, F_z_enveloppe, 'FaceColor', 'c', 'LineStyle', "-", 'EdgeColor', 'k', 'FaceAlpha', 0.5);
+    trisurf(tri_enveloppe, F_x_enveloppe, F_y_enveloppe, F_z_enveloppe, 'FaceColor', 'c', 'LineStyle', "-", 'LineWidth', 1.5, 'EdgeColor', 'k', 'FaceAlpha', 0.5, 'DisplayName', "Enveloppe forces atteignables");
 end
-plot3([0, Fd(1)], [0, Fd(2)], [0, Fd(3)], '-rx');
-surf(x_sphere, y_sphere, z_sphere, 'FaceColor', 'r', 'LineStyle', 'none', 'FaceAlpha', 0.8)
-plot3([0, Fc(1)], [0, Fc(2)], [0, Fc(3)], '--go')
+plot3([0, Fd(1)], [0, Fd(2)], [0, Fd(3)], '-rx', 'LineWidth', 2, 'MarkerSize', 20, 'DisplayName', "$F_d$");
+surf(x_sphere, y_sphere, z_sphere, 'FaceColor', 'r', 'LineStyle', 'none', 'FaceAlpha', 0.5, 'DisplayName', "Sphere des rotations possibles de $F_d$")
+plot3([0, Fc(1)], [0, Fc(2)], [0, Fc(3)], '--go', 'LineWidth', 2, 'MarkerSize', 20, 'DisplayName', "Rotation optimale de $F_d$ de "+num2str(pitch_c*180/pi)+"°")
 hold off
 axis equal
 grid();
-xlabel('$F_x$', 'Interpreter', 'latex', 'FontSize', 20);
-ylabel('$F_y$', 'Interpreter', 'latex', 'FontSize', 20);
-zlabel('$F_z$', 'Interpreter', 'latex', 'FontSize', 20, 'Rotation', 0);
-title("Volume des forces atteignables pour $\alpha=$"+num2str(alpha_value*180/pi)+"$^\circ$", 'Interpreter', 'latex')
-if ~cascade
-    legend("Enveloppe forces atteignables", ...
-        "$F_d$", "Sphere des rotations possibles de $F_d$", "Rotation optimale de $F_d$ de "+num2str(pitch_c*180/pi)+"°", 'Interpreter', 'latex', 'Location', 'northeast')
-else
-    legend("$F_d$", "Sphere des rotations possibles de $F_d$", "Rotation optimale de $F_d$ de "+num2str(pitch_c*180/pi)+"°", 'Interpreter', 'latex', 'Location', 'northeast')
-end
+xlabel('$F_x$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName);
+ylabel('$F_y$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName);
+zlabel('$F_z$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName, 'Rotation', 0);
+title("Volume des forces atteignables"+newline+"pour $\alpha=$"+num2str(alpha_value*180/pi)+"$^\circ$", 'Interpreter', 'latex', 'FontSize', fontSize_title)
+legend('Interpreter', 'latex', 'Location', 'northeast', 'FontSize', fontSize_legend)
 view(45, 30)
 lightangle(-45,30)
 lighting flat
 xlim(Fx_limits);
 ylim(Fy_limits);
 zlim(Fz_limits);
+xticks(ticks_horizontal)
+yticks(ticks_horizontal)
+xtickangle(0)
+ytickangle(0)
+tile.XAxis.FontSize = fontSize_axisTicks;
+tile.YAxis.FontSize = fontSize_axisTicks;
+tile.ZAxis.FontSize = fontSize_axisTicks;
 
-nexttile();
+tile = nexttile();
 hold on
 if ~cascade
     t = -100:0.1:100;
     for i = 1:n_actionneur
-        d1 = edgeLines{1,i}(:,1)*t+edgeLines{1,i}(:,2);
-        d2 = edgeLines{2,i}(:,1)*t+edgeLines{2,i}(:,2);
-        plot(d1(1,:), d1(2,:))
-        plot(d2(1,:), d2(2,:))
+        d1 = reshape(edgeLines(1,i,:,1), [2,1])*t+reshape(edgeLines(1,i,:,2), [2,1]);
+        d2 = reshape(edgeLines(2,i,:,1), [2,1])*t+reshape(edgeLines(2,i,:,2), [2,1]);
+        plot(d1(1,:), d1(2,:), '-b', 'LineWidth', 2, 'HandleVisibility','off')
+        plot(d2(1,:), d2(2,:), '-r', 'LineWidth', 2, 'HandleVisibility','off')
     end
-    for i = 1:size(listIntersections_raw, 2)
-        scatter(listIntersections_raw(1,i), listIntersections_raw(2,i))
-    end
+    % for i = 1:size(listIntersections, 2)
+    scatter(listIntersections_raw(1,:), listIntersections_raw(2,:), 100, 'white', 'o', "filled", 'DisplayName', "Edges intersections")
+    % end
     [tri_scatter, ~] = convhull(listIntersections(1,:), listIntersections(2,:));
-    fill(listIntersections(1,tri_scatter), listIntersections(2,tri_scatter), 'cyan', 'FaceAlpha', 0.5)
-    xlim([fprop_sat_min - 0.1*(fprop_sat_max-fprop_sat_min), fprop_sat_max + 0.1*(fprop_sat_max-fprop_sat_min)])
-    ylim([fprop_sat_min - 0.1*(fprop_sat_max-fprop_sat_min), fprop_sat_max + 0.1*(fprop_sat_max-fprop_sat_min)])
-    grid()
-end
+    fill(listIntersections(1,tri_scatter), listIntersections(2,tri_scatter), 'cyan', 'FaceColor', 'cyan', 'EdgeColor', 'cyan', 'FaceAlpha', 0.5, 'DisplayName', "Espace born\'e par les limites")
 
-nexttile();
+end
+xlim([fprop_sat_min - 0.5*(fprop_sat_max-fprop_sat_min), fprop_sat_max + 0.5*(fprop_sat_max-fprop_sat_min)])
+ylim([fprop_sat_min - 0.5*(fprop_sat_max-fprop_sat_min), fprop_sat_max + 0.5*(fprop_sat_max-fprop_sat_min)])
+grid()
+xlabel('$\lambda_1$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName);
+ylabel('$\lambda_2$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName, 'Rotation', 0);
+title("Plan ($\lambda_1, \lambda_2$),"+newline+"d\'elimit\'e par les saturations", 'Interpreter', 'latex', 'FontSize', fontSize_title)
+legend('Interpreter', 'latex', 'Location', 'northeast', 'FontSize', fontSize_legend)
+tile.XAxis.FontSize = fontSize_axisTicks;
+tile.YAxis.FontSize = fontSize_axisTicks;
+tile.ZAxis.FontSize = fontSize_axisTicks;
+
+
+tile = nexttile();
 hold on
 if ~cascade
     for i=1:nLines_visu
         t = listLinesFw_visu{2,i};
         d = listLinesFw_visu{1,i}(:,1)*t+listLinesFw_visu{1,i}(:,2);
         if i>1
-            plot(d(1,:), d(2,:), "c", 'HandleVisibility','off');
+            plot(d(1,:), d(2,:), "c", 'LineWidth', 2, 'HandleVisibility','off');
         else
-            plot(d(1,:), d(2,:), "c");
+            plot(d(1,:), d(2,:), "c", 'LineWidth', 2, 'DisplayName', "Forces atteignables pour $\psi="+num2str(yaw*180/pi)+"$°");
         end
     end
 end
-plot([0, Fd_t], [0, Fd(3)], '-rx')
-plot(x_circle_force, y_circle_force, '--r')
-plot([0, Fc_t], [0, Fc_z], '--go')
+plot([0, Fd_t], [0, Fd(3)], '-rx', 'LineWidth', 2, 'MarkerSize', 20, 'DisplayName', "$F_d$")
+plot(x_circle_force, y_circle_force, '--r', 'LineWidth', 2, 'DisplayName', "Cercle des rotations possibles de $F_d$")
+plot([0, Fc_t], [0, Fc_z], '--go', 'LineWidth', 2, 'MarkerSize', 20, 'DisplayName', "Rotation optimale de $F_d$ de "+num2str(pitch_c*180/pi)+"°")
 hold off
 axis equal
 grid()
-xlabel('$F_t$', 'Interpreter', 'latex', 'FontSize', 20);
-ylabel('$F_z$', 'Interpreter', 'latex', 'FontSize', 20);
-title("Volume des forces atteignables pour $\alpha=$"+num2str(alpha_value*180/pi)+"$^\circ$, dans le plan vertical de l'effort horizontal", 'Interpreter', 'latex')
-if ~cascade
-    legend("Forces atteignables pour $\psi="+num2str(yaw*180/pi)+"$°", "$F_d$", "Cercle des rotations possibles de $F_d$", ...
-        "Rotation optimale de $F_d$ de "+num2str(pitch_c*180/pi)+"°", 'Interpreter', 'latex', 'Location', 'northeast')
-else
-    legend("$F_d$", "Cercle des rotations possibles de $F_d$", ...
-        "Rotation optimale de $F_d$ de "+num2str(pitch_c*180/pi)+"°", 'Interpreter', 'latex', 'Location', 'northeast')
-end
+xlabel('$F_t$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName);
+ylabel('$F_z$', 'Interpreter', 'latex', 'FontSize', fontSize_axisName, 'Rotation', 0);
+title("Volume des forces atteignables pour $\alpha=$"+num2str(alpha_value*180/pi)+"$^\circ$,"+newline+"dans le plan ($F_t,F_z)$", 'Interpreter', 'latex', 'FontSize', fontSize_title)
+legend('Interpreter', 'latex', 'Location', 'northeast', 'FontSize', fontSize_legend)
 xlim(Ft_limits);
 ylim(Fz_limits);
+xticks(ticks_horizontal)
+xtickangle(0)
+tile.XAxis.FontSize = fontSize_axisTicks;
+tile.YAxis.FontSize = fontSize_axisTicks;
+tile.ZAxis.FontSize = fontSize_axisTicks;
 
 
-% frame.Visible = 'on';
+frame.Visible = 'on';

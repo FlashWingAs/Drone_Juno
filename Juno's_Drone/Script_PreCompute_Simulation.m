@@ -331,7 +331,7 @@ alpha_arm_min = 0*pi/180;
 alpha_arm_max = 90*pi/180;
 alpha_arm_moy = (alpha_arm_min+alpha_arm_max)/2;
 beta_arm_num = 0*pi/180;
-dead_zone_alpha = 60*pi/180;
+dead_zone_alpha = 1*pi/180;
 
 k_t_num = 0.1;
 k_tc_num = 0.11;
@@ -492,7 +492,7 @@ waitbar(current_step/number_of_steps, objWaitBar, "calcul en cours - "+num2str(c
 
 %% FastHex control verifications precompute
 
-Script_PreCompute_SmartCascade_Juno;
+
 
 %% Définition de la trajectoire
 

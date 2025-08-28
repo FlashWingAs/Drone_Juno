@@ -259,6 +259,7 @@ prop_sat_min = fprop_sat_min/k_t_num;
 prop_sat_max = fprop_sat_max/k_t_num;
 fprop_sat_vec = [fprop_sat_min, fprop_sat_max];
 prop_sat_vec = [prop_sat_min, prop_sat_max];
+fprop_sat_vec_margin = [fprop_sat_min + 0.1*(fprop_sat_max - fprop_sat_min), fprop_sat_max - 0.1*(fprop_sat_max - fprop_sat_min)];
 
 I_xx_num = 1/12*m_drone_num*(3*r_arm_num^2+h_drone_num^2);
 I_yy_num = 1/12*m_drone_num*(3*r_arm_num^2+h_drone_num^2);
@@ -397,8 +398,14 @@ waitbar(current_step/number_of_steps, objWaitBar, "calcul en cours - "+num2str(c
 
 %% FastHex control verifications precompute
 
+text = 'Calcul préliminaires du controlleur';
+Func_Progress_Log(false, text, LOG_SIZE);
+
 % Script_PreCompute_SmartCascade;
-% Script_PreCompute_VisuAddon;
+
+current_step = current_step + 1;
+waitbar(current_step/number_of_steps, objWaitBar, "calcul en cours - "+num2str(current_step/number_of_steps*100,3)+"%")
+Func_Progress_Log(true, text, LOG_SIZE);
 
 %% Définition de la trajectoire
 
@@ -411,10 +418,10 @@ Attitude_time = Trajectory_time;
 Amplitude_sinus = 1.4;
 Pulsation_sinus = 2*pi/4;
 
-p0 = [-Amplitude_sinus; 0; 1];
-dp0 = [0; Amplitude_sinus*Pulsation_sinus; 0];
-init         = [p0; eta0_XYZ; dp0; d_eta0_XYZ];
-init_bushing = [p0; eta0_xyz; dp0; d_eta0_xyz];
+% p0 = [-Amplitude_sinus; 0; 1];
+% dp0 = [0; Amplitude_sinus*Pulsation_sinus; 0];
+% init         = [p0; eta0_XYZ; dp0; d_eta0_XYZ];
+% init_bushing = [p0; eta0_xyz; dp0; d_eta0_xyz];
 
 % p(t)
 Trajectory_points = [init(1) 2 4 0 -2 0 -4 0 0 0 0
