@@ -3,8 +3,8 @@
 
 resolutionYaw   = pi/160;
 
-interpolationAlpha = linspace(1, 89, 89)*pi/180;
-interpolationYaw   = linspace(-pi+pi/180, pi, 360);
+interpolationAlpha = linspace(0.5, 89.5, 179)*pi/180;
+interpolationYaw   = linspace(-pi+pi/180, pi, 720);
 
 sizeAlpha = size(interpolationAlpha, 2);
 sizeYaw   = size(interpolationYaw, 2);
@@ -36,7 +36,7 @@ if flag_recompute
             temp = Func_SmartCascade_PreComputeLight(interpolationAlpha(iAlpha), interpolationYaw(iYaw));
             
             for i = 1:2
-                for j = 1:6
+                for j = 1:8
                     if temp(i, j) > numericalErrorTreshold ||...
                             temp(i, j) < -numericalErrorTreshold
                         kFmot_memory(iYaw, iAlpha,i, j) = 0;
@@ -53,6 +53,6 @@ if flag_recompute
     
 
     save('kFmot_memorySave.mat', 'kFmot_memory')
-    close(objWaitBar_precompute)
+    % close(objWaitBar_precompute)
 
 end

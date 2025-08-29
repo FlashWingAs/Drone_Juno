@@ -1,6 +1,9 @@
-Fd = [1; 1*tan(pi/3)+1e-4; m_drone_num*g_ref-2];
+% Fd = [1; 1*tan(pi/3)+1e-4; m_drone_num*g_ref-2];
+Fd = [1; 1*tan(interpolationYaw(400)); m_drone_num*g_ref];
+
 Mixer_flat = J_rotor_flat_num;
-alpha_value = 30*pi/180;
+% alpha_value = 30*pi/180;
+alpha_value = interpolationAlpha(2);
 dead_zone_alpha = 1*pi/180;
 Plot_Limits = [-5, 5; -5, 5; -0, 18; -5, 5];
 

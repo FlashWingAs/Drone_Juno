@@ -1,5 +1,9 @@
-Fd = [0; 0; m_drone_num*g_ref];
-alpha_value = 30*pi/180;
+% Fd = [0; 0; 
+Fd = [1; 1*tan(interpolationYaw(210)); m_drone_num*g_ref];
+
+% alpha_value = 30*pi/180;
+alpha_value = interpolationAlpha(40);
+
 dead_zone_alpha = 1*pi/180;
 Plot_Limits = [-7.5, 7.5; -7.5, 7.5; -0, 30; -7.5, 7.5];
 
@@ -83,9 +87,9 @@ r_sphere = sqrt(r_sphere2);
 
 if ~cascade
 
-    % [~, ~, kFmot, ~] = Func_SmartCascade_PreCompute(alpha_value, yaw, n_actionneur);
+    [~, ~, kFmot, ~] = Func_SmartCascade_PreCompute(alpha_value, yaw, n_actionneur);
     % TO BE REPLACED WITH INTERPOLATION
-    kFmot = Func_interpolationPreComputed(alpha_value, yaw, interpolationAlpha, interpolationYaw, kFmot_memory, dead_zone_alpha);
+    % kFmot = Func_interpolationPreComputed(alpha_value, yaw, interpolationAlpha, interpolationYaw, kFmot_memory, dead_zone_alpha);
 
     % Calcul des droites délimitants l'espace accessible pour F_mot
 
